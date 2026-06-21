@@ -1,0 +1,777 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>AntibioGram Pro — نظام تحليل حساسية المضادات الحيوية</title>
+<meta name="description" content="المنظومة الإكلينيكية المتكاملة لرصد المقاومة الميكروبية وتحليل الأنماط الوبائية — جمهورية العراق، وزارة الصحة، دائرة صحة بابل"/>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;800;900&family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet"/>
+<style>
+  :root {
+    --teal:    #0d9488;
+    --teal-l:  #14b8a6;
+    --teal-d:  #0f766e;
+    --cyan:    #0891b2;
+    --navy:    #0f172a;
+    --dark:    #1e293b;
+    --slate:   #334155;
+    --muted:   #64748b;
+    --light:   #f1f5f9;
+    --white:   #ffffff;
+    --violet:  #7c3aed;
+    --rose:    #e11d48;
+    --amber:   #d97706;
+    --emerald: #059669;
+    --grad:    linear-gradient(135deg, #0f172a 0%, #0d9488 50%, #0891b2 100%);
+  }
+
+  * { margin:0; padding:0; box-sizing:border-box; }
+
+  html { scroll-behavior:smooth; }
+
+  body {
+    font-family: 'Tajawal', 'Inter', sans-serif;
+    background: var(--navy);
+    color: var(--white);
+    line-height: 1.7;
+    overflow-x: hidden;
+  }
+
+  /* ── NAV ─────────────────────────────────────────── */
+  nav {
+    position: fixed; top:0; left:0; right:0; z-index:100;
+    background: rgba(15,23,42,.85);
+    backdrop-filter: blur(16px);
+    border-bottom: 1px solid rgba(13,148,136,.25);
+    padding: 0 2rem;
+    display: flex; align-items:center; justify-content:space-between;
+    height: 64px;
+  }
+  .nav-logo {
+    display:flex; align-items:center; gap:.75rem;
+    font-size:1.1rem; font-weight:800; color:var(--teal-l);
+    letter-spacing:-.01em;
+  }
+  .nav-logo svg { width:32px; height:32px; }
+  .nav-links { display:flex; gap:1.5rem; }
+  .nav-links a {
+    color: #94a3b8; text-decoration:none; font-size:.9rem; font-weight:500;
+    transition: color .2s;
+  }
+  .nav-links a:hover { color:var(--teal-l); }
+
+  /* ── HERO ────────────────────────────────────────── */
+  .hero {
+    min-height: 100vh;
+    background: var(--grad);
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    text-align:center; padding: 6rem 2rem 4rem;
+    position:relative; overflow:hidden;
+  }
+  .hero::before {
+    content:'';
+    position:absolute; inset:0;
+    background: radial-gradient(ellipse 80% 60% at 50% 40%, rgba(20,184,166,.15) 0%, transparent 70%);
+    pointer-events:none;
+  }
+  .grid-bg {
+    position:absolute; inset:0; pointer-events:none;
+    background-image:
+      linear-gradient(rgba(13,148,136,.08) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(13,148,136,.08) 1px, transparent 1px);
+    background-size: 48px 48px;
+    mask-image: radial-gradient(ellipse 80% 80% at 50% 50%, black 30%, transparent 100%);
+  }
+  .badge {
+    display:inline-flex; align-items:center; gap:.5rem;
+    background: rgba(13,148,136,.18); border:1px solid rgba(20,184,166,.35);
+    border-radius:999px; padding:.35rem 1rem; font-size:.8rem; color:var(--teal-l);
+    margin-bottom:1.5rem; letter-spacing:.04em; font-weight:600;
+  }
+  .hero h1 {
+    font-size: clamp(2rem, 5vw, 3.5rem);
+    font-weight:900; line-height:1.2;
+    background: linear-gradient(135deg, #fff 0%, #99f6e4 60%, #67e8f9 100%);
+    -webkit-background-clip:text; -webkit-text-fill-color:transparent;
+    background-clip:text;
+    margin-bottom:.75rem;
+  }
+  .hero-sub {
+    font-size: clamp(1rem, 2.5vw, 1.35rem);
+    color: #94a3b8; max-width:680px; margin:0 auto 2rem;
+    font-weight:400;
+  }
+  .hero-en {
+    font-size:.95rem; color:#64748b; margin-bottom:2.5rem;
+    font-family:'Inter',sans-serif; font-weight:300; letter-spacing:.02em;
+  }
+  .pills { display:flex; flex-wrap:wrap; gap:.75rem; justify-content:center; margin-bottom:3rem; }
+  .pill {
+    padding:.4rem 1rem; border-radius:999px; font-size:.8rem; font-weight:700;
+    border:1px solid; letter-spacing:.03em;
+  }
+  .pill-teal  { background:rgba(13,148,136,.15); border-color:rgba(20,184,166,.4); color:#5eead4; }
+  .pill-violet{ background:rgba(124,58,237,.15); border-color:rgba(139,92,246,.4); color:#c4b5fd; }
+  .pill-cyan  { background:rgba(8,145,178,.15);  border-color:rgba(34,211,238,.4); color:#67e8f9; }
+  .pill-amber { background:rgba(217,119,6,.15);  border-color:rgba(251,191,36,.4); color:#fcd34d; }
+  .pill-rose  { background:rgba(225,29,72,.15);  border-color:rgba(251,113,133,.4); color:#fda4af; }
+  .pill-emerald{background:rgba(5,150,105,.15);  border-color:rgba(52,211,153,.4); color:#6ee7b7; }
+
+  /* scroll cue */
+  .scroll-cue {
+    display:flex; flex-direction:column; align-items:center; gap:.5rem;
+    color:#475569; font-size:.8rem; animation: bob 2s ease-in-out infinite;
+  }
+  @keyframes bob { 0%,100%{transform:translateY(0)} 50%{transform:translateY(6px)} }
+
+  /* ── SECTIONS ────────────────────────────────────── */
+  section { padding: 5rem 2rem; }
+  .container { max-width:1100px; margin:0 auto; }
+
+  .section-label {
+    text-align:center; font-size:.75rem; font-weight:700; letter-spacing:.12em;
+    text-transform:uppercase; color:var(--teal-l); margin-bottom:.75rem;
+  }
+  .section-title {
+    text-align:center; font-size: clamp(1.6rem,3.5vw,2.4rem);
+    font-weight:800; color:var(--white); margin-bottom:.75rem;
+  }
+  .section-desc {
+    text-align:center; color:var(--muted); max-width:620px; margin:0 auto 3rem;
+    font-size:1rem;
+  }
+
+  /* ── ABOUT ───────────────────────────────────────── */
+  #about { background: #0b1628; }
+  .about-grid { display:grid; grid-template-columns:1fr 1fr; gap:3rem; align-items:center; }
+  .about-text p { color:#94a3b8; margin-bottom:1rem; font-size:1rem; line-height:1.8; }
+  .about-stats { display:grid; grid-template-columns:1fr 1fr; gap:1rem; }
+  .stat-card {
+    background: rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.08);
+    border-radius:16px; padding:1.5rem; text-align:center;
+    transition: transform .2s, border-color .2s;
+  }
+  .stat-card:hover { transform:translateY(-4px); border-color:rgba(13,148,136,.4); }
+  .stat-num { font-size:2rem; font-weight:900; color:var(--teal-l); }
+  .stat-lbl { font-size:.85rem; color:var(--muted); margin-top:.25rem; }
+
+  /* ── FEATURES ────────────────────────────────────── */
+  #features { background: var(--navy); }
+  .features-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(280px,1fr)); gap:1.5rem; }
+  .feat-card {
+    background: rgba(255,255,255,.03); border:1px solid rgba(255,255,255,.07);
+    border-radius:20px; padding:1.75rem; position:relative; overflow:hidden;
+    transition: transform .25s, border-color .25s, box-shadow .25s;
+  }
+  .feat-card::before {
+    content:''; position:absolute; inset:0; border-radius:20px;
+    background: radial-gradient(circle at top right, rgba(13,148,136,.12), transparent 60%);
+    opacity:0; transition: opacity .3s;
+  }
+  .feat-card:hover { transform:translateY(-6px); border-color:rgba(13,148,136,.35); box-shadow:0 20px 40px rgba(0,0,0,.3); }
+  .feat-card:hover::before { opacity:1; }
+  .feat-icon {
+    width:48px; height:48px; border-radius:14px;
+    display:flex; align-items:center; justify-content:center;
+    font-size:1.4rem; margin-bottom:1rem;
+  }
+  .feat-card h3 { font-size:1.05rem; font-weight:700; color:var(--white); margin-bottom:.5rem; }
+  .feat-card p  { font-size:.88rem; color:var(--muted); line-height:1.7; }
+
+  /* ── MEDICAL ─────────────────────────────────────── */
+  #medical { background: #0b1628; }
+  .tab-bar {
+    display:flex; gap:.5rem; flex-wrap:wrap; justify-content:center; margin-bottom:2.5rem;
+  }
+  .tab-btn {
+    padding:.5rem 1.25rem; border-radius:999px; border:1px solid rgba(255,255,255,.12);
+    background:transparent; color:#94a3b8; font-size:.875rem; font-weight:600;
+    cursor:pointer; transition:all .2s; font-family:'Tajawal',sans-serif;
+  }
+  .tab-btn.active, .tab-btn:hover {
+    background:rgba(13,148,136,.2); border-color:var(--teal-l); color:var(--teal-l);
+  }
+  .tab-panel { display:none; }
+  .tab-panel.active { display:block; animation: fadeIn .3s ease; }
+  @keyframes fadeIn { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:none} }
+
+  .info-table { width:100%; border-collapse:collapse; font-size:.9rem; }
+  .info-table th {
+    background:rgba(13,148,136,.2); color:var(--teal-l);
+    padding:.75rem 1rem; text-align:right; border-bottom:1px solid rgba(13,148,136,.3);
+    font-weight:700;
+  }
+  .info-table td {
+    padding:.75rem 1rem; border-bottom:1px solid rgba(255,255,255,.06);
+    color:#cbd5e1; vertical-align:top;
+  }
+  .info-table tr:last-child td { border-bottom:none; }
+  .info-table tr:hover td { background:rgba(255,255,255,.03); }
+  .badge-r  { background:#7f1d1d; color:#fca5a5; padding:.2rem .6rem; border-radius:6px; font-size:.75rem; font-weight:700; }
+  .badge-g  { background:#064e3b; color:#6ee7b7; padding:.2rem .6rem; border-radius:6px; font-size:.75rem; font-weight:700; }
+  .badge-y  { background:#78350f; color:#fcd34d; padding:.2rem .6rem; border-radius:6px; font-size:.75rem; font-weight:700; }
+  .badge-v  { background:#3b0764; color:#d8b4fe; padding:.2rem .6rem; border-radius:6px; font-size:.75rem; font-weight:700; }
+
+  /* ── MATH ────────────────────────────────────────── */
+  #math { background: var(--navy); }
+  .formula-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(300px,1fr)); gap:1.5rem; }
+  .formula-card {
+    background: rgba(255,255,255,.03); border:1px solid rgba(255,255,255,.08);
+    border-radius:20px; padding:1.75rem; border-top:3px solid var(--teal-l);
+    transition: transform .2s;
+  }
+  .formula-card:hover { transform:translateY(-4px); }
+  .formula-card h3 { font-size:1rem; font-weight:700; color:var(--teal-l); margin-bottom:1rem; }
+  .formula-box {
+    background:#0b1628; border:1px solid rgba(13,148,136,.25);
+    border-radius:10px; padding:1rem 1.25rem; font-family:monospace;
+    font-size:.82rem; color:#67e8f9; direction:ltr; text-align:left; line-height:1.8;
+    margin-bottom:1rem; white-space:pre;
+  }
+  .formula-card p { font-size:.85rem; color:var(--muted); line-height:1.7; }
+
+  /* ── ARCHITECTURE ────────────────────────────────── */
+  #arch { background: #0b1628; }
+  .arch-diagram {
+    background:#040d1a; border:1px solid rgba(13,148,136,.25);
+    border-radius:16px; padding:1.75rem; font-family:monospace;
+    font-size:.8rem; color:#67e8f9; direction:ltr; text-align:left;
+    line-height:1.9; overflow-x:auto; margin-bottom:2rem;
+  }
+  .layer-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:1rem; }
+  .layer-card {
+    background:rgba(255,255,255,.03); border:1px solid rgba(255,255,255,.08);
+    border-radius:14px; padding:1.25rem;
+    border-right:3px solid var(--teal-l);
+  }
+  .layer-card h4 { font-size:.9rem; font-weight:700; color:var(--white); margin-bottom:.4rem; }
+  .layer-card p  { font-size:.8rem; color:var(--muted); line-height:1.6; }
+  .tech-chip {
+    display:inline-block; background:rgba(13,148,136,.15); border:1px solid rgba(20,184,166,.3);
+    color:#5eead4; border-radius:6px; padding:.15rem .5rem; font-size:.72rem; font-weight:700;
+    margin:.2rem .1rem;
+  }
+
+  /* ── SECURITY ────────────────────────────────────── */
+  #security { background: var(--navy); }
+  .security-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(260px,1fr)); gap:1.25rem; }
+  .sec-card {
+    background:rgba(255,255,255,.03); border:1px solid rgba(255,255,255,.07);
+    border-radius:16px; padding:1.5rem; display:flex; gap:1rem; align-items:flex-start;
+    transition: border-color .2s;
+  }
+  .sec-card:hover { border-color:rgba(13,148,136,.4); }
+  .sec-icon { font-size:1.5rem; flex-shrink:0; }
+  .sec-card h4 { font-size:.95rem; font-weight:700; color:var(--white); margin-bottom:.3rem; }
+  .sec-card p  { font-size:.83rem; color:var(--muted); line-height:1.6; }
+
+  /* ── TEAM ────────────────────────────────────────── */
+  #team { background: #0b1628; }
+  .hierarchy {
+    max-width:480px; margin:0 auto;
+    display:flex; flex-direction:column; align-items:center; gap:0;
+  }
+  .hier-item {
+    display:flex; flex-direction:column; align-items:center; width:100%;
+  }
+  .hier-box {
+    background:rgba(255,255,255,.05); border:1px solid rgba(255,255,255,.1);
+    border-radius:12px; padding:.75rem 2rem; text-align:center; color:#e2e8f0;
+    font-weight:600; font-size:.95rem; width:100%; max-width:380px;
+    transition: border-color .2s, background .2s;
+  }
+  .hier-box.top    { border-color:rgba(13,148,136,.6); background:rgba(13,148,136,.15); color:var(--teal-l); font-size:1.05rem; font-weight:800; }
+  .hier-box.mid    { border-color:rgba(8,145,178,.4);  background:rgba(8,145,178,.1); }
+  .hier-box.dim    { color:#64748b; font-style:italic; font-size:.85rem; border-style:dashed; }
+  .hier-box.author { border-color:rgba(124,58,237,.5); background:rgba(124,58,237,.12); color:#c4b5fd; font-size:1rem; font-weight:800; }
+  .hier-connector  { width:2px; height:24px; background:rgba(13,148,136,.35); }
+
+  /* ── FOOTER ──────────────────────────────────────── */
+  footer {
+    background:#040d1a; border-top:1px solid rgba(255,255,255,.06);
+    padding:2.5rem 2rem; text-align:center;
+    color:#475569; font-size:.85rem;
+  }
+  footer strong { color:#64748b; }
+
+  /* ── RESPONSIVE ──────────────────────────────────── */
+  @media(max-width:768px){
+    .about-grid { grid-template-columns:1fr; }
+    .nav-links  { display:none; }
+    .arch-diagram { font-size:.68rem; }
+  }
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+  <div class="nav-logo">
+    <svg viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <rect width="32" height="32" rx="10" fill="rgba(13,148,136,.2)" stroke="rgba(20,184,166,.4)" stroke-width="1"/>
+      <path d="M8 16h4l3-6 4 12 3-6h4" stroke="#14b8a6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
+    AntibioGram Pro
+  </div>
+  <div class="nav-links">
+    <a href="#about">عن البرنامج</a>
+    <a href="#features">المميزات</a>
+    <a href="#medical">المنطق الطبي</a>
+    <a href="#math">الرياضيات</a>
+    <a href="#arch">البرمجة</a>
+    <a href="#team">الفريق</a>
+  </div>
+</nav>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="grid-bg"></div>
+  <div class="badge">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+    CLSI M39 · EUCAST 2024 · Magiorakos 2012
+  </div>
+  <h1>نظام تحليل حساسية<br/>المضادات الحيوية</h1>
+  <p class="hero-sub">المنظومة الإكلينيكية المتكاملة لرصد المقاومة الميكروبية<br/>وتحليل الأنماط الوبائية وتوجيه العلاج التجريبي</p>
+  <p class="hero-en">Integrated Clinical Platform for Antimicrobial Resistance Surveillance &amp; Antibiogram Analysis</p>
+  <div class="pills">
+    <span class="pill pill-teal">CLSI / EUCAST</span>
+    <span class="pill pill-violet">Wilson 95% CI</span>
+    <span class="pill pill-cyan">MDR · XDR · PDR</span>
+    <span class="pill pill-amber">WISCA Coverage</span>
+    <span class="pill pill-rose">AMR Phenotypes</span>
+    <span class="pill pill-emerald">Electron · React 18</span>
+  </div>
+  <div class="scroll-cue">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12l7 7 7-7"/></svg>
+    اكتشف المزيد
+  </div>
+</section>
+
+<!-- ABOUT -->
+<section id="about">
+  <div class="container">
+    <div class="about-grid">
+      <div class="about-text">
+        <div class="section-label">نبذة عامة</div>
+        <h2 class="section-title" style="text-align:right">ما هو AntibioGram Pro؟</h2>
+        <p>تطبيق سطح مكتب متكامل مصمم خصيصاً للبيئات الصحية العراقية، يعمل بالكامل دون اتصال بالإنترنت ويحافظ على سرية بيانات المرضى بشكل تام وفق المعايير الدولية.</p>
+        <p>يُمكِّن فرق الصيدلة السريرية ومراكز الميكروبيولوجيا من إنشاء الأنتيبيوغرام التراكمي وفق معايير CLSI M39، ورصد أنماط المقاومة الميكروبية وتتبعها عبر الزمن، ومقارنة البيانات بين المستشفيات وتوليد التقارير الإقليمية.</p>
+        <p>يتخذ البرنامج قرارات العلاج التجريبي المبنية على دليل رياضي موثَّق، مما يجعله أداة لا غنى عنها في اللجان الدوائية والعلاجية.</p>
+      </div>
+      <div class="about-stats">
+        <div class="stat-card">
+          <div class="stat-num">+30</div>
+          <div class="stat-lbl">نوع جرثومة مدعومة</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-num">6</div>
+          <div class="stat-lbl">أنماط AMR مكتشفة</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-num">2</div>
+          <div class="stat-lbl">معيار دولي (CLSI/EUCAST)</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-num">95%</div>
+          <div class="stat-lbl">Wilson Confidence Interval</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FEATURES -->
+<section id="features">
+  <div class="container">
+    <div class="section-label">الوظائف</div>
+    <h2 class="section-title">المميزات الرئيسية</h2>
+    <p class="section-desc">منظومة متكاملة تجمع بين الدقة الإكلينيكية والقوة الإحصائية في واجهة عربية سهلة الاستخدام</p>
+    <div class="features-grid">
+
+      <div class="feat-card">
+        <div class="feat-icon" style="background:rgba(13,148,136,.15)">🏥</div>
+        <h3>إدارة الشبكة الاستشفائية</h3>
+        <p>شبكة غير محدودة من المستشفيات مع رفع ملف بابل متعدد الأوراق — كل ورقة تمثل مستشفى. كشف تلقائي للتنسيق وإنشاء المستشفيات دفعةً واحدة.</p>
+      </div>
+
+      <div class="feat-card">
+        <div class="feat-icon" style="background:rgba(8,145,178,.15)">📊</div>
+        <h3>الأنتيبيوغرام التراكمي</h3>
+        <p>حساب %S، %I، %R المستقل لكل فئة مع فترات ثقة ويلسون 95% وعلامة تحذير تلقائية عند N &lt; 30 وفق CLSI M39-A4.</p>
+      </div>
+
+      <div class="feat-card">
+        <div class="feat-icon" style="background:rgba(124,58,237,.15)">🧬</div>
+        <h3>كشف الأنماط المقاومة</h3>
+        <p>رصد تلقائي لـ MRSA، VRE، CRE، ESBL، CRAB، CRPA مع تنبيهات فورية وتصنيف MDR/XDR/PDR وفق Magiorakos 2012.</p>
+      </div>
+
+      <div class="feat-card">
+        <div class="feat-icon" style="background:rgba(217,119,6,.15)">💊</div>
+        <h3>تغطية WISCA التجريبية</h3>
+        <p>حساب احتمالية التغطية الموزونة لأي مضاد مُختار مع مراعاة توزيع الجراثيم المحلية لدعم قرار العلاج التجريبي.</p>
+      </div>
+
+      <div class="feat-card">
+        <div class="feat-icon" style="background:rgba(225,29,72,.15)">📈</div>
+        <h3>تحليل الاتجاهات الزمنية</h3>
+        <p>انحدار OLS الخطي لتوقع نسب المقاومة واختبار مربع كاي لمقارنة التوزيعات عبر السنوات والمستشفيات.</p>
+      </div>
+
+      <div class="feat-card">
+        <div class="feat-icon" style="background:rgba(5,150,105,.15)">🗺️</div>
+        <h3>اللوحة الإقليمية</h3>
+        <p>مقارنة شاملة بين المستشفيات مع خريطة حرارية موحدة وتقارير إقليمية جاهزة للعرض أمام اللجان الرسمية.</p>
+      </div>
+
+      <div class="feat-card">
+        <div class="feat-icon" style="background:rgba(79,70,229,.15)">📋</div>
+        <h3>التصدير الاحترافي</h3>
+        <p>تصدير Excel (.xlsx) وPDF وWord مع دعم كامل للغة العربية RTL وطباعة الأنتيبيوغرام بتنسيق احترافي جاهز للنشر.</p>
+      </div>
+
+      <div class="feat-card">
+        <div class="feat-icon" style="background:rgba(15,118,110,.15)">🔒</div>
+        <h3>خصوصية مطلقة</h3>
+        <p>كامل البيانات تُخزَّن محلياً دون إرسالها لأي خادم. البرنامج يعمل بالكامل بدون إنترنت مع تشفير RC4 للكود المصدري.</p>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- MEDICAL -->
+<section id="medical">
+  <div class="container">
+    <div class="section-label">الأساس العلمي</div>
+    <h2 class="section-title">المنطق الطبي والسريري</h2>
+    <p class="section-desc">يستند البرنامج إلى أحدث المعايير الدولية المعتمدة في ميكروبيولوجيا الإكلينيك وعلم وبائيات المقاومة</p>
+
+    <div class="tab-bar">
+      <button class="tab-btn active" onclick="showTab('breakpoints')">نقاط الانكسار</button>
+      <button class="tab-btn" onclick="showTab('phenotypes')">الأنماط المقاومة</button>
+      <button class="tab-btn" onclick="showTab('mdr')">MDR / XDR / PDR</button>
+      <button class="tab-btn" onclick="showTab('wisca')">تغطية WISCA</button>
+    </div>
+
+    <div id="breakpoints" class="tab-panel active">
+      <table class="info-table">
+        <thead><tr><th>المعيار</th><th>الجهة المُصدِرة</th><th>آلية التصنيف</th><th>الاستخدام</th></tr></thead>
+        <tbody>
+          <tr>
+            <td><strong>CLSI M100</strong></td>
+            <td>Clinical &amp; Laboratory Standards Institute — USA</td>
+            <td>S ≤ X &nbsp;|&nbsp; I بين X وY &nbsp;|&nbsp; R ≥ Y</td>
+            <td><span class="badge-g">إرشادات العراق</span></td>
+          </tr>
+          <tr>
+            <td><strong>EUCAST 2024</strong></td>
+            <td>European Committee on Antimicrobial Susceptibility Testing</td>
+            <td>S ≤ X &nbsp;|&nbsp; R > X مع تعامل خاص بالحدود غير المتصلة</td>
+            <td><span class="badge-v">معيار أوروبي</span></td>
+          </tr>
+        </tbody>
+      </table>
+      <br/>
+      <div style="background:rgba(13,148,136,.08);border:1px solid rgba(13,148,136,.2);border-radius:12px;padding:1rem 1.25rem;color:#94a3b8;font-size:.875rem;line-height:1.8">
+        <strong style="color:#5eead4">قاعدة EUCAST الحاسمة:</strong> عند R > X (حد غير متصل)، فإن المعزولة بتركيز MIC = X تُصنَّف متوسطة (I) وليس مقاومة. لهذا يستخدم البرنامج <code style="color:#67e8f9">rLimit = X × 2</code> (التخفيف المضاعف التالي) لضمان التصنيف الصحيح.
+      </div>
+    </div>
+
+    <div id="phenotypes" class="tab-panel">
+      <table class="info-table">
+        <thead><tr><th>الظاهرة</th><th>الجرثومة</th><th>المضاد المُشغِّل</th><th>الأهمية السريرية</th></tr></thead>
+        <tbody>
+          <tr><td><span class="badge-r">MRSA</span></td><td>S. aureus</td><td>Oxacillin / Cefoxitin</td><td>خيارات محدودة — يلزم Vancomycin</td></tr>
+          <tr><td><span class="badge-r">VRE</span></td><td>Enterococcus spp.</td><td>Vancomycin / Teicoplanin</td><td>أزمة علاجية — Linezolid / Daptomycin</td></tr>
+          <tr><td><span class="badge-r">CRE</span></td><td>Enterobacterales</td><td>Carbapenems</td><td>WHO أولوية حرجة</td></tr>
+          <tr><td><span class="badge-y">ESBL</span></td><td>Enterobacterales</td><td>Cephalosporins G3/G4</td><td>تفشٍّ واسع — يلزم Carbapenem</td></tr>
+          <tr><td><span class="badge-r">CRAB</span></td><td>A. baumannii</td><td>Carbapenems</td><td>شائع في ICU — خيارات محدودة جداً</td></tr>
+          <tr><td><span class="badge-r">CRPA</span></td><td>P. aeruginosa</td><td>Meropenem / Imipenem</td><td>علاج بالتوليف فقط</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div id="mdr" class="tab-panel">
+      <table class="info-table">
+        <thead><tr><th>التصنيف</th><th>الاسم الكامل</th><th>التعريف الدقيق</th></tr></thead>
+        <tbody>
+          <tr>
+            <td><span class="badge-y">MDR</span></td>
+            <td>Multi-Drug Resistant</td>
+            <td>مقاوم لـ ≥ 1 عامل في ≥ 3 فئات دوائية من الفئات المحددة لكل جرثومة</td>
+          </tr>
+          <tr>
+            <td><span class="badge-r">XDR</span></td>
+            <td>Extensively Drug Resistant</td>
+            <td>مقاوم لجميع الفئات الدوائية ما عدا ≤ 2 فئتين (متحسسة لعاملَين على الأكثر)</td>
+          </tr>
+          <tr>
+            <td><span class="badge-r">PDR</span></td>
+            <td>Pan-Drug Resistant</td>
+            <td>مقاوم لجميع العوامل في جميع الفئات الدوائية المختبَرة بلا استثناء</td>
+          </tr>
+        </tbody>
+      </table>
+      <br/>
+      <div style="background:rgba(124,58,237,.08);border:1px solid rgba(124,58,237,.2);border-radius:12px;padding:1rem 1.25rem;color:#94a3b8;font-size:.875rem;line-height:1.8">
+        <strong style="color:#c4b5fd">المرجع:</strong> Magiorakos A-P, et al. "Multidrug-resistant, extensively drug-resistant and pandrug-resistant bacteria: an international expert proposal for interim standard definitions for acquired resistance." <em>Clinical Microbiology and Infection,</em> 2012;18(3):268–281.
+      </div>
+    </div>
+
+    <div id="wisca" class="tab-panel">
+      <div style="background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08);border-radius:16px;padding:1.75rem;margin-bottom:1.5rem;">
+        <h3 style="color:var(--teal-l);margin-bottom:1rem;">معادلة WISCA — Weighted-Incidence Syndromic Combination Antibiogram</h3>
+        <div class="formula-box">Coverage(Ab) = Σ [ P(organism_i) × %S(organism_i, Ab) ]
+              ÷  Σ P(organism_i)</div>
+        <p style="color:#94a3b8;font-size:.875rem;line-height:1.8">حيث P(organism_i) هو التكرار النسبي لكل جرثومة في العينة المحلية، مما يجعل الحساب مُرجَّحاً بواقع المستشفى لا بالمتوسطات العامة.</p>
+      </div>
+      <table class="info-table">
+        <thead><tr><th>النسبة</th><th>التقييم</th><th>القرار السريري</th></tr></thead>
+        <tbody>
+          <tr><td>≥ 90%</td><td><span class="badge-g">ممتازة</span></td><td>مضاد تجريبي مثالي — يُنصح به</td></tr>
+          <tr><td>80–89%</td><td><span class="badge-y">جيدة</span></td><td>مقبول مع مراقبة الاستجابة</td></tr>
+          <tr><td>70–79%</td><td><span class="badge-y">مقبولة</span></td><td>استخدام حذر مع التعديل المبكر</td></tr>
+          <tr><td>&lt; 70%</td><td><span class="badge-r">غير كافية</span></td><td>لا يُنصح به تجريبياً</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<!-- MATH -->
+<section id="math">
+  <div class="container">
+    <div class="section-label">الأساس الرياضي</div>
+    <h2 class="section-title">المنطق الرياضي والإحصائي</h2>
+    <p class="section-desc">معادلات دقيقة مبنية على أسس إحصائية راسخة لضمان موثوقية النتائج وقابليتها للتدقيق</p>
+
+    <div class="formula-grid">
+
+      <div class="formula-card">
+        <h3>معادلات SIR الأساسية</h3>
+        <div class="formula-box">%S = (S / N) × 100
+%I = (I / N) × 100
+%R = (R / N) × 100</div>
+        <p>تُحسَب النسب بشكل مستقل لكل فئة. الصيغة %R = 100 − %S خاطئة إكلينيكياً لأنها تُسقط الفئة المتوسطة (I).</p>
+      </div>
+
+      <div class="formula-card">
+        <h3>Wilson Score Interval — 95%</h3>
+        <div class="formula-box">p̂ = S / N     z = 1.959964
+
+CI = ( p̂ + z²/2N  ±
+  z√[p̂(1−p̂)/N + z²/4N²] )
+  / ( 1 + z²/N )</div>
+        <p>مُوصى بها في CLSI M39-A4. لا تتجاوز الحدود [0,1] وأدق من Wald عند N صغيرة أو p̂ قريبة من 0 أو 1.</p>
+      </div>
+
+      <div class="formula-card">
+        <h3>معيار الموثوقية — N ≥ 30</h3>
+        <div class="formula-box">N ≥ 30  →  نتيجة موثوقة ✓
+N < 30  →  تحذير (*) تلقائي ⚠</div>
+        <p>يُضاف تنبيه بصري تلقائي على كل خلية في الأنتيبيوغرام تعتمد على أقل من 30 معزولة وفق CLSI M39-A4.</p>
+      </div>
+
+      <div class="formula-card">
+        <h3>Chi-Square مع تصحيح ياتس</h3>
+        <div class="formula-box">χ² = N × (|ad − bc| − N/2)²
+      / (r₁ × r₂ × c₁ × c₂)
+
+يُفعَّل تصحيح ياتس إذا
+كان أي تكرار متوقع < 5</div>
+        <p>يُستخدم لمقارنة توزيعات المقاومة بين المستشفيات أو عبر السنوات، مع p-value مشتقة من تقريب Z = √χ².</p>
+      </div>
+
+      <div class="formula-card">
+        <h3>OLS Regression — توقع المقاومة</h3>
+        <div class="formula-box">y  = 100 − %S  (معدل المقاومة)
+x  = السنة
+
+slope = Σ(xᵢ−x̄)(yᵢ−ȳ)
+       / Σ(xᵢ−x̄)²
+
+ŷ(سنة) = slope×سنة + intercept
+         [مقيَّد: 0% – 100%]</div>
+        <p>يوقِّع التوجهات المستقبلية ويُحدد إذا كانت المقاومة في ارتفاع أو استقرار أو تراجع عبر فترة البيانات.</p>
+      </div>
+
+      <div class="formula-card">
+        <h3>قاعدة المعزولة الأولى — CLSI M39</h5>
+        <div class="formula-box">لكل مريض × جرثومة:
+  أبقِ فقط أول عزل في الفترة
+  الزمنية، أزِل المكررات.
+
+الهدف: منع التحيز الإحصائي
+من المرضى المصابين بشكل مزمن</div>
+        <p>تُطبَّق تلقائياً عند رفع البيانات مع إشعار عدد المكررات المحذوفة لضمان الشفافية.</p>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- ARCHITECTURE -->
+<section id="arch">
+  <div class="container">
+    <div class="section-label">البنية التقنية</div>
+    <h2 class="section-title">المعمارية البرمجية</h2>
+    <p class="section-desc">تطبيق Electron أصيل يجمع قوة Node.js مع مرونة React 18 في بيئة محلية آمنة</p>
+
+    <div class="arch-diagram">┌──────────────────────────────────────────────────────────────┐
+│                    Electron Shell (v22)                       │
+│              Windows 7 SP1 (32/64-bit) and above             │
+├──────────────────────────┬───────────────────────────────────┤
+│      Main Process        │        Renderer Process            │
+│      (Node.js)           │        (Chromium)                  │
+│                          │                                    │
+│  • Window management     │  • React 18 + TypeScript           │
+│  • File system I/O       │  • Vite 5 bundler                  │
+│  • IPC bridge            │  • Tailwind CSS  (RTL support)     │
+│  • Native menus          │  • Recharts  (data visualization)  │
+│  • Print / Export        │  • SheetJS / XLSX parsing          │
+└──────────────────────────┴───────────────────────────────────┘
+            │                              │
+            └──────────────┬───────────────┘
+                           │
+              ┌────────────▼────────────┐
+              │   Local Storage Engine  │
+              │  Hospitals · Antibiogram│
+              │  History · Catalogs     │
+              └─────────────────────────┘</div>
+
+    <div class="layer-grid">
+      <div class="layer-card">
+        <h4>واجهة المستخدم</h4>
+        <span class="tech-chip">React 18</span><span class="tech-chip">TypeScript</span>
+        <p>مكونات وظيفية مع إدارة حالة محلية. دعم كامل للعربية RTL عبر Tailwind CSS.</p>
+      </div>
+      <div class="layer-card">
+        <h4>محرك الحسابات</h4>
+        <span class="tech-chip">TypeScript Pure</span>
+        <p>وحدة مستقلة قابلة للاختبار لكل المعادلات الطبية والإحصائية.</p>
+      </div>
+      <div class="layer-card">
+        <h4>تحليل Excel</h4>
+        <span class="tech-chip">SheetJS</span>
+        <p>دعم .xlsx/.xls متعددة الأوراق. كشف تلقائي للتنسيقات (بابل / WHONET / قياسي).</p>
+      </div>
+      <div class="layer-card">
+        <h4>التخزين المحلي</h4>
+        <span class="tech-chip">localStorage API</span>
+        <p>لا خوادم خارجية. لا قواعد بيانات. البيانات لا تغادر الجهاز.</p>
+      </div>
+      <div class="layer-card">
+        <h4>تصدير التقارير</h4>
+        <span class="tech-chip">SheetJS</span><span class="tech-chip">HTML→PDF</span>
+        <p>Excel وPDF وWord مع ترويسات وتذييلات مخصصة للمستشفى.</p>
+      </div>
+      <div class="layer-card">
+        <h4>بيئة التنفيذ</h4>
+        <span class="tech-chip">Electron 22</span><span class="tech-chip">Vite 5</span>
+        <p>تطبيق سطح مكتب أصيل. متوافق مع Windows 7 SP1 32-bit فما فوق.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- SECURITY -->
+<section id="security">
+  <div class="container">
+    <div class="section-label">الحماية والخصوصية</div>
+    <h2 class="section-title">أمان البيانات</h2>
+    <p class="section-desc">تصميم أمان متعدد الطبقات يضمن سرية بيانات المرضى وسلامة التطبيق</p>
+    <div class="security-grid">
+      <div class="sec-card"><div class="sec-icon">🏠</div><div><h4>تخزين محلي بالكامل</h4><p>لا سحابة، لا خوادم، لا إرسال بيانات. كل المعلومات تبقى على جهاز المستشفى فقط.</p></div></div>
+      <div class="sec-card"><div class="sec-icon">🔐</div><div><h4>تشفير الكوكيز</h4><p>enableCookieEncryption مُفعَّل عبر Electron Fuse لتشفير التخزين المحلي.</p></div></div>
+      <div class="sec-card"><div class="sec-icon">🛡️</div><div><h4>عزل العملية</h4><p>runAsNode: false يمنع تنفيذ Node.js خارج الحزمة. ASAR integrity مُفعَّل.</p></div></div>
+      <div class="sec-card"><div class="sec-icon">📦</div><div><h4>سلامة الحزمة</h4><p>onlyLoadAppFromAsar: true يرفض أي كود خارجي محقون أثناء التشغيل.</p></div></div>
+      <div class="sec-card"><div class="sec-icon">🔒</div><div><h4>تشويش الكود المصدري</h4><p>RC4 String Encryption + Control Flow Flattening + Self-Defending لطبقتي Renderer وMain.</p></div></div>
+      <div class="sec-card"><div class="sec-icon">🚫</div><div><h4>بيانات المرضى محمية</h4><p>لا تُغادر بيانات المرضى الجهاز أبداً، مما يجعل البرنامج متوافقاً مع متطلبات الخصوصية الطبية.</p></div></div>
+    </div>
+  </div>
+</section>
+
+<!-- TEAM -->
+<section id="team">
+  <div class="container">
+    <div class="section-label">الجهة المشرفة</div>
+    <h2 class="section-title">فريق التطوير والإشراف</h2>
+    <p class="section-desc">صُمِّم هذا النظام تحت إشراف الجهات الصحية الرسمية في محافظة بابل</p>
+    <div class="hierarchy">
+
+      <div class="hier-item">
+        <div class="hier-box top">🇮🇶 جمهورية العراق</div>
+        <div class="hier-connector"></div>
+      </div>
+      <div class="hier-item">
+        <div class="hier-box mid">وزارة الصحة</div>
+        <div class="hier-connector"></div>
+      </div>
+      <div class="hier-item">
+        <div class="hier-box mid">دائرة صحة بابل</div>
+        <div class="hier-connector"></div>
+      </div>
+      <div class="hier-item">
+        <div class="hier-box mid">قسم الصيدلة</div>
+        <div class="hier-connector"></div>
+      </div>
+      <div class="hier-item">
+        <div class="hier-box mid">شعبة الصيدلة السريرية</div>
+        <div class="hier-connector"></div>
+      </div>
+      <div class="hier-item">
+        <div class="hier-box dim">بالتعاون مع</div>
+        <div class="hier-connector"></div>
+      </div>
+      <div class="hier-item">
+        <div class="hier-box mid">وحدة متابعة لجان الصيدلة والعلاج</div>
+        <div class="hier-connector"></div>
+      </div>
+      <div class="hier-item">
+        <div class="hier-box author">✦ Abdallah Jawad Kadhim ✦</div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <p style="color:#5eead4;font-weight:700;font-size:1rem;margin-bottom:.5rem">AntibioGram Pro</p>
+  <p>نظام تحليل حساسية المضادات الحيوية — دائرة صحة بابل</p>
+  <br/>
+  <strong>© 2026 Abdallah Jawad Kadhim — جميع الحقوق محفوظة</strong>
+  <p style="margin-top:.5rem;font-size:.78rem;color:#334155">هذا البرنامج ملك خاص. لا يُسمح بإعادة التوزيع أو النسخ أو التعديل دون إذن كتابي صريح من المؤلف.</p>
+</footer>
+
+<script>
+function showTab(id) {
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  event.target.classList.add('active');
+}
+
+// Intersection Observer for fade-in animations
+const observer = new IntersectionObserver((entries) => {
+  entries.forEach(e => {
+    if (e.isIntersecting) {
+      e.target.style.opacity = '1';
+      e.target.style.transform = 'translateY(0)';
+    }
+  });
+}, { threshold: 0.1 });
+
+document.querySelectorAll('.feat-card, .formula-card, .sec-card, .layer-card, .stat-card').forEach(el => {
+  el.style.opacity = '0';
+  el.style.transform = 'translateY(20px)';
+  el.style.transition = 'opacity .5s ease, transform .5s ease';
+  observer.observe(el);
+});
+</script>
+
+</body>
+</html>
