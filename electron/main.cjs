@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Antibiogram Analytics System - Desktop Application
  *
  * A comprehensive antimicrobial susceptibility analysis system
@@ -6,7 +6,7 @@
  *
  * @copyright 2026 Abdallahjawadk
  * @author Abdallahjawadk
- * @license MIT
+ * @license Proprietary - All Rights Reserved
  *
  * System Requirements:
  * - Windows 7 SP1 (32-bit/64-bit) or later
@@ -17,32 +17,98 @@
 
 const { app, BrowserWindow, Menu, Tray, nativeImage, ipcMain, dialog, shell } = require('electron');
 const path = require('path');
-const fs = require('fs');
+const fs   = require('fs');
+const os   = require('os');
+const crypto = require('crypto');
 
-// Keep a global reference of the window object
 let mainWindow = null;
-let tray = null;
+let tray       = null;
 
-// App information
-const APP_NAME = 'Antibiogram Analytics';
+const APP_NAME    = 'Antibiogram Analytics';
 const APP_VERSION = '1.0.0';
-const COPYRIGHT = '© 2026 Abdallahjawadk. All Rights Reserved.';
-const AUTHOR = 'Abdallahjawadk';
+const COPYRIGHT   = '© 2026 Abdallahjawadk. All Rights Reserved.';
+const AUTHOR      = 'Abdallahjawadk';
 
-// Development mode check
 const isDev = process.env.NODE_ENV === 'development' || !app.isPackaged;
 
-// Get icon path. electron-builder packages electron/** under resources/app,
-// so electron/assets travels with the app and __dirname/assets resolves in
-// both development and the packaged build.
+// ── Runtime integrity checks ─────────────────────────────────────────────────
+
+function enforceIntegrity() {
+  if (isDev) return; // skip in development
+
+  // 1. Block running as plain Node.js (fuse covers this but belt-and-suspenders)
+  if (process.versions.electron === undefined) {
+    process.exit(1);
+  }
+
+  // 2. Ensure the app is running from its installed location (not extracted/copied)
+  const execPath = process.execPath.toLowerCase();
+  const tmpPaths = [
+    os.tmpdir().toLowerCase(),
+    'appdata\\local\\temp',
+    '/tmp/',
+    '\\temp\\',
+  ];
+  for (const t of tmpPaths) {
+    if (execPath.includes(t)) {
+      dialog.showErrorBox('Security Error', 'Please install and run the application from its installer.');
+      app.exit(1);
+      return;
+    }
+  }
+
+  // 3. Verify the asar archive exists and is not zero-length
+  const asarPath = path.join(process.resourcesPath, 'app.asar');
+  try {
+    const st = fs.statSync(asarPath);
+    if (st.size < 1024) throw new Error('asar too small');
+  } catch {
+    dialog.showErrorBox('Integrity Error', 'Application files are corrupted. Please reinstall.');
+    app.exit(1);
+    return;
+  }
+
+  // 4. Verify install registry marker matches actual location (Windows only)
+  if (process.platform === 'win32') {
+    try {
+      // Soft check only - registry not always accessible in all environments
+      const { execSync } = require('child_process');
+      const regVal = execSync(
+        'reg query "HKCU\\Software\\Abdallahjawadk\\AntibiogramAnalytics" /v InstallPath 2>nul',
+        { encoding: 'utf8', timeout: 2000 }
+      ).trim();
+      if (regVal && !regVal.includes('ERROR')) {
+        const match = regVal.match(/InstallPath\s+REG_SZ\s+(.+)/);
+        if (match) {
+          const registeredPath = match[1].trim().toLowerCase();
+          const actualPath = path.dirname(process.execPath).toLowerCase();
+          if (!actualPath.startsWith(registeredPath.slice(0, Math.min(20, registeredPath.length)))) {
+            // Path mismatch — possible copy-and-run attack. Log only, don't block.
+            console.warn('[integrity] Path mismatch - registered vs actual.');
+          }
+        }
+      }
+    } catch { /* registry check is optional */ }
+  }
+}
+
+// Anti-debug: detect debugger attachment in production
+function checkAntiDebug() {
+  if (isDev) return;
+  // Electron's inspector port: if something is debugging the main process, refuse
+  if (process.debugPort || process.env.ELECTRON_ENABLE_LOGGING) {
+    app.exit(0);
+  }
+}
+
+// ── Icon helper ──────────────────────────────────────────────────────────────
 function getIconPath() {
   const iconFile = process.platform === 'win32' ? 'icon.ico' : 'icon.png';
   return path.join(__dirname, 'assets', iconFile);
 }
 
-// Create the main application window
+// ── Main window ──────────────────────────────────────────────────────────────
 function createMainWindow() {
-  // Create the browser window
   mainWindow = new BrowserWindow({
     width: 1400,
     height: 900,
@@ -55,32 +121,41 @@ function createMainWindow() {
       contextIsolation: true,
       enableRemoteModule: false,
       preload: path.join(__dirname, 'preload.cjs'),
-      // Hardening: keep the renderer sandboxed and block dangerous APIs.
       sandbox: true,
       webSecurity: true,
       allowRunningInsecureContent: false,
       spellcheck: false,
+      // Block DevTools in production
+      devTools: isDev,
     },
     frame: true,
     backgroundColor: '#f8fafc',
     show: false,
-    // Windows 7 compatibility
     autoHideMenuBar: false,
   });
 
-  // Load the app
+  // Disable DevTools in production via keyboard and menu
+  if (!isDev) {
+    mainWindow.webContents.on('before-input-event', (event, input) => {
+      if (
+        (input.control && input.shift && input.key === 'I') ||
+        (input.control && input.shift && input.key === 'J') ||
+        (input.control && input.key === 'U') ||
+        input.key === 'F12'
+      ) {
+        event.preventDefault();
+      }
+    });
+  }
+
   if (isDev) {
     mainWindow.loadURL('http://localhost:5173');
     mainWindow.webContents.openDevTools();
   } else {
-    // In the packaged app, electron-builder copies dist/** to the app root
-    // (resources/app/dist) while this file lives in resources/app/electron,
-    // so the renderer entry point is one directory up from __dirname.
     mainWindow.loadFile(path.join(__dirname, '..', 'dist', 'index.html'));
   }
 
-  // Security hardening: external links open in the system browser, never in an
-  // in-app window, and in-app navigation away from the bundled app is blocked.
+  // Block external navigation
   mainWindow.webContents.setWindowOpenHandler(({ url }) => {
     if (url.startsWith('https://')) shell.openExternal(url);
     return { action: 'deny' };
@@ -93,128 +168,77 @@ function createMainWindow() {
     }
   });
 
-  // Show window when ready
   mainWindow.once('ready-to-show', () => {
     mainWindow.show();
     mainWindow.focus();
   });
 
-  // Handle window close
   mainWindow.on('close', (event) => {
-    if (app.isQuitting) {
-      return;
-    }
+    if (app.isQuitting) return;
     event.preventDefault();
     mainWindow.hide();
   });
 
-  // Handle window closed
-  mainWindow.on('closed', () => {
-    mainWindow = null;
-  });
+  mainWindow.on('closed', () => { mainWindow = null; });
 
-  // Create application menu
   createApplicationMenu();
 }
 
-// Create system tray icon
+// ── System tray ──────────────────────────────────────────────────────────────
 function createTray() {
-  const iconPath = getIconPath();
-  const icon = nativeImage.createFromPath(iconPath);
-
+  const icon = nativeImage.createFromPath(getIconPath());
   tray = new Tray(icon.resize({ width: 16, height: 16 }));
-
   const contextMenu = Menu.buildFromTemplate([
-    {
-      label: APP_NAME,
-      enabled: false
-    },
+    { label: APP_NAME, enabled: false },
     { type: 'separator' },
     {
       label: 'Open',
       click: () => {
-        if (mainWindow) {
-          mainWindow.show();
-          mainWindow.focus();
-        } else {
-          createMainWindow();
-        }
+        if (mainWindow) { mainWindow.show(); mainWindow.focus(); }
+        else createMainWindow();
       }
     },
-    {
-      label: 'Exit',
-      click: () => {
-        app.isQuitting = true;
-        app.quit();
-      }
-    }
+    { label: 'Exit', click: () => { app.isQuitting = true; app.quit(); } }
   ]);
-
   tray.setToolTip(APP_NAME);
   tray.setContextMenu(contextMenu);
-
   tray.on('click', () => {
     if (mainWindow) {
-      if (mainWindow.isVisible()) {
-        mainWindow.hide();
-      } else {
-        mainWindow.show();
-        mainWindow.focus();
-      }
+      if (mainWindow.isVisible()) mainWindow.hide();
+      else { mainWindow.show(); mainWindow.focus(); }
     }
   });
 }
 
-// Create application menu
+// ── Application menu ─────────────────────────────────────────────────────────
 function createApplicationMenu() {
   const template = [
     {
       label: 'File',
       submenu: [
+        { label: 'New Hospital',   accelerator: 'CmdOrCtrl+N', click: () => mainWindow.webContents.send('menu-new-hospital') },
         {
-          label: 'New Hospital',
-          accelerator: 'CmdOrCtrl+N',
-          click: () => mainWindow.webContents.send('menu-new-hospital')
-        },
-        {
-          label: 'Import Data',
-          accelerator: 'CmdOrCtrl+I',
+          label: 'Import Data',    accelerator: 'CmdOrCtrl+I',
           click: async () => {
             const result = await dialog.showOpenDialog(mainWindow, {
               properties: ['openFile'],
-              filters: [
-                { name: 'Excel Files', extensions: ['xlsx', 'xls'] }
-              ]
+              filters: [{ name: 'Excel Files', extensions: ['xlsx', 'xls'] }]
             });
-            if (!result.canceled && result.filePaths.length > 0) {
+            if (!result.canceled && result.filePaths.length > 0)
               mainWindow.webContents.send('menu-import-file', result.filePaths[0]);
-            }
           }
         },
         { type: 'separator' },
         {
           label: 'Export Report',
           submenu: [
-            {
-              label: 'Export as PDF',
-              click: () => mainWindow.webContents.send('menu-export-pdf')
-            },
-            {
-              label: 'Export as Excel',
-              click: () => mainWindow.webContents.send('menu-export-excel')
-            },
-            {
-              label: 'Export as Word',
-              click: () => mainWindow.webContents.send('menu-export-word')
-            }
+            { label: 'Export as PDF',   click: () => mainWindow.webContents.send('menu-export-pdf') },
+            { label: 'Export as Excel', click: () => mainWindow.webContents.send('menu-export-excel') },
+            { label: 'Export as Word',  click: () => mainWindow.webContents.send('menu-export-word') },
           ]
         },
         { type: 'separator' },
-        {
-          label: 'Print',
-          accelerator: 'CmdOrCtrl+P',
-          click: () => mainWindow.webContents.send('menu-print')
-        },
+        { label: 'Print', accelerator: 'CmdOrCtrl+P', click: () => mainWindow.webContents.send('menu-print') },
         { type: 'separator' },
         { role: 'quit' }
       ]
@@ -222,163 +246,67 @@ function createApplicationMenu() {
     {
       label: 'Edit',
       submenu: [
-        { role: 'undo' },
-        { role: 'redo' },
+        { role: 'undo' }, { role: 'redo' },
         { type: 'separator' },
-        { role: 'cut' },
-        { role: 'copy' },
-        { role: 'paste' },
-        { role: 'selectAll' }
+        { role: 'cut' }, { role: 'copy' }, { role: 'paste' }, { role: 'selectAll' }
       ]
     },
     {
       label: 'View',
       submenu: [
-        {
-          label: 'Dashboard',
-          accelerator: 'CmdOrCtrl+1',
-          click: () => mainWindow.webContents.send('menu-navigate', 'dashboard')
-        },
-        {
-          label: 'Hospitals',
-          accelerator: 'CmdOrCtrl+2',
-          click: () => mainWindow.webContents.send('menu-navigate', 'hospitals')
-        },
-        {
-          label: 'Antibiogram',
-          accelerator: 'CmdOrCtrl+3',
-          click: () => mainWindow.webContents.send('menu-navigate', 'antibiogram')
-        },
-        {
-          label: 'Comparison',
-          accelerator: 'CmdOrCtrl+4',
-          click: () => mainWindow.webContents.send('menu-navigate', 'comparison')
-        },
-        {
-          label: 'Trends',
-          accelerator: 'CmdOrCtrl+5',
-          click: () => mainWindow.webContents.send('menu-navigate', 'trends')
-        },
-        {
-          label: 'Alerts',
-          accelerator: 'CmdOrCtrl+6',
-          click: () => mainWindow.webContents.send('menu-navigate', 'alerts')
-        },
+        { label: 'Dashboard',   accelerator: 'CmdOrCtrl+1', click: () => mainWindow.webContents.send('menu-navigate', 'dashboard') },
+        { label: 'Hospitals',   accelerator: 'CmdOrCtrl+2', click: () => mainWindow.webContents.send('menu-navigate', 'hospitals') },
+        { label: 'Antibiogram', accelerator: 'CmdOrCtrl+3', click: () => mainWindow.webContents.send('menu-navigate', 'antibiogram') },
+        { label: 'Comparison',  accelerator: 'CmdOrCtrl+4', click: () => mainWindow.webContents.send('menu-navigate', 'comparison') },
+        { label: 'Trends',      accelerator: 'CmdOrCtrl+5', click: () => mainWindow.webContents.send('menu-navigate', 'trends') },
+        { label: 'Alerts',      accelerator: 'CmdOrCtrl+6', click: () => mainWindow.webContents.send('menu-navigate', 'alerts') },
         { type: 'separator' },
-        {
-          label: 'Toggle Full Screen',
-          accelerator: 'F11',
-          click: () => mainWindow.setFullScreen(!mainWindow.isFullScreen())
-        },
+        { label: 'Toggle Full Screen', accelerator: 'F11', click: () => mainWindow.setFullScreen(!mainWindow.isFullScreen()) },
         { type: 'separator' },
         { role: 'reload' },
         { role: 'forceReload' },
-        { role: 'toggleDevTools', visible: isDev }
+        ...(isDev ? [{ role: 'toggleDevTools' }] : [])
       ]
     },
     {
       label: 'Language',
       submenu: [
-        {
-          label: 'English',
-          click: () => mainWindow.webContents.send('menu-language', 'en')
-        },
-        {
-          label: 'العربية',
-          click: () => mainWindow.webContents.send('menu-language', 'ar')
-        }
+        { label: 'English',   click: () => mainWindow.webContents.send('menu-language', 'en') },
+        { label: 'العربية', click: () => mainWindow.webContents.send('menu-language', 'ar') }
       ]
     },
     {
       label: 'Help',
       submenu: [
-        {
-          label: 'About ' + APP_NAME,
-          click: () => showAboutDialog()
-        },
-        {
-          label: 'Documentation',
-          click: () => shell.openExternal('https://github.com/abdallahjawadk/antibiogram-analytics')
-        },
+        { label: 'About ' + APP_NAME, click: () => showAboutDialog() },
+        { label: 'Documentation', click: () => shell.openExternal('https://github.com/abdallahjawadk-code/antibiogram-analytics') },
         { type: 'separator' },
-        {
-          label: 'Check for Updates',
-          click: () => mainWindow.webContents.send('menu-check-updates')
-        },
+        { label: 'Check for Updates', click: () => mainWindow.webContents.send('menu-check-updates') },
         { type: 'separator' },
-        {
-          label: 'Report Issue',
-          click: () => shell.openExternal('https://github.com/abdallahjawadk/antibiogram-analytics/issues')
-        }
+        { label: 'Report Issue', click: () => shell.openExternal('https://github.com/abdallahjawadk-code/antibiogram-analytics/issues') }
       ]
     }
   ];
-
-  const menu = Menu.buildFromTemplate(template);
-  Menu.setApplicationMenu(menu);
+  Menu.setApplicationMenu(Menu.buildFromTemplate(template));
 }
 
-// Show About dialog
 function showAboutDialog() {
   dialog.showMessageBox(mainWindow, {
     type: 'info',
     title: `About ${APP_NAME}`,
     message: APP_NAME,
-    detail: `Version: ${APP_VERSION}\nAuthor: ${AUTHOR}\n\n${COPYRIGHT}\n\nA comprehensive antimicrobial susceptibility analysis system for generating professional antibiogram charts.\n\nCompatible with Windows 7 SP1 and later.`,
+    detail: `Version: ${APP_VERSION}\nAuthor: ${AUTHOR}\n\n${COPYRIGHT}\n\nA comprehensive antimicrobial susceptibility analysis system.\n\nCompatible with Windows 7 SP1 and later.`,
     buttons: ['OK'],
     icon: getIconPath()
   });
 }
 
-// App ready event
-app.whenReady().then(() => {
-  createMainWindow();
-  createTray();
-
-  // macOS specific
-  app.on('activate', () => {
-    if (BrowserWindow.getAllWindows().length === 0) {
-      createMainWindow();
-    }
-  });
-});
-
-// App window all closed event
-app.on('window-all-closed', () => {
-  if (process.platform !== 'darwin') {
-    app.quit();
-  }
-});
-
-// App before quit event
-app.on('before-quit', () => {
-  app.isQuitting = true;
-});
-
-// App will quit event
-app.on('will-quit', () => {
-  if (tray) {
-    tray.destroy();
-  }
-});
-
-// Handle certificate errors (for development)
-app.on('certificate-error', (event, webContents, url, error, certificate, callback) => {
-  if (isDev) {
-    event.preventDefault();
-    callback(true);
-  } else {
-    callback(false);
-  }
-});
-
-// Single instance lock
+// ── Single instance lock ──────────────────────────────────────────────────────
 const gotTheLock = app.requestSingleInstanceLock();
-
 if (!gotTheLock) {
   app.quit();
 } else {
-  app.on('second-instance', (event, commandLine, workingDirectory) => {
+  app.on('second-instance', () => {
     if (mainWindow) {
       if (mainWindow.isMinimized()) mainWindow.restore();
       mainWindow.focus();
@@ -386,32 +314,47 @@ if (!gotTheLock) {
   });
 }
 
-// IPC handlers
-ipcMain.handle('get-app-version', () => APP_VERSION);
-ipcMain.handle('get-app-name', () => APP_NAME);
-ipcMain.handle('get-author', () => AUTHOR);
-ipcMain.handle('get-copyright', () => COPYRIGHT);
+// ── App lifecycle ─────────────────────────────────────────────────────────────
+app.whenReady().then(() => {
+  checkAntiDebug();
+  enforceIntegrity();
+  createMainWindow();
+  createTray();
+  app.on('activate', () => {
+    if (BrowserWindow.getAllWindows().length === 0) createMainWindow();
+  });
+});
 
-// File export handlers
+app.on('window-all-closed', () => { if (process.platform !== 'darwin') app.quit(); });
+app.on('before-quit',       () => { app.isQuitting = true; });
+app.on('will-quit',         () => { if (tray) tray.destroy(); });
+
+// Certificate errors: only allow in dev
+app.on('certificate-error', (event, webContents, url, error, certificate, callback) => {
+  if (isDev) { event.preventDefault(); callback(true); }
+  else callback(false);
+});
+
+// ── IPC handlers ──────────────────────────────────────────────────────────────
+ipcMain.handle('get-app-version',  () => APP_VERSION);
+ipcMain.handle('get-app-name',     () => APP_NAME);
+ipcMain.handle('get-author',       () => AUTHOR);
+ipcMain.handle('get-copyright',    () => COPYRIGHT);
+
 ipcMain.handle('save-pdf', async (event, defaultName) => {
-  const result = await dialog.showSaveDialog(mainWindow, {
+  return dialog.showSaveDialog(mainWindow, {
     defaultPath: defaultName || 'antibiogram-report.pdf',
     filters: [{ name: 'PDF Files', extensions: ['pdf'] }]
   });
-  return result;
 });
 
 ipcMain.handle('save-excel', async (event, defaultName) => {
-  const result = await dialog.showSaveDialog(mainWindow, {
+  return dialog.showSaveDialog(mainWindow, {
     defaultPath: defaultName || 'antibiogram-report.xlsx',
     filters: [{ name: 'Excel Files', extensions: ['xlsx', 'xls'] }]
   });
-  return result;
 });
 
-// Native print and save handlers. `window.open()` is deliberately blocked in
-// the packaged renderer as part of the navigation hardening, so printable
-// reports and charts must be rendered by a controlled, short-lived window.
 ipcMain.handle('print-html', async (_event, { html, title }) => {
   const printWindow = new BrowserWindow({
     show: false,
@@ -423,13 +366,15 @@ ipcMain.handle('print-html', async (_event, { html, title }) => {
       webSecurity: true,
     },
   });
-
   await printWindow.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(html)}`);
   return new Promise((resolve) => {
-    printWindow.webContents.print({ silent: false, printBackground: true, title: title || APP_NAME }, (success, failureReason) => {
-      if (!printWindow.isDestroyed()) printWindow.close();
-      resolve({ success, failureReason: failureReason || null });
-    });
+    printWindow.webContents.print(
+      { silent: false, printBackground: true, title: title || APP_NAME },
+      (success, failureReason) => {
+        if (!printWindow.isDestroyed()) printWindow.close();
+        resolve({ success, failureReason: failureReason || null });
+      }
+    );
   });
 });
 
@@ -444,22 +389,18 @@ ipcMain.handle('save-file', async (_event, { defaultName, content, filters }) =>
 });
 
 ipcMain.handle('open-file', async () => {
-  const result = await dialog.showOpenDialog(mainWindow, {
+  return dialog.showOpenDialog(mainWindow, {
     properties: ['openFile'],
-    filters: [
-      { name: 'Excel Files', extensions: ['xlsx', 'xls'] }
-    ]
+    filters: [{ name: 'Excel Files', extensions: ['xlsx', 'xls'] }]
   });
-  return result;
 });
 
 ipcMain.handle('show-message', async (event, options) => {
   return dialog.showMessageBox(mainWindow, options);
 });
 
-// Process arguments
+// File association: handle .xlsx/.xls passed as argument
 if (process.argv.length > 1) {
-  // Handle command line arguments for file association
   const filePath = process.argv[1];
   if (fs.existsSync(filePath) && (filePath.endsWith('.xlsx') || filePath.endsWith('.xls'))) {
     mainWindow?.webContents?.send('file-opened', filePath);

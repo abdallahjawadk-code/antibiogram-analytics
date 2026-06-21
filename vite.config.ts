@@ -1,15 +1,19 @@
-import { defineConfig } from 'vite';
+﻿import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [react()],
   base: './',
+  worker: {
+    format: 'es',
+  },
   build: {
     outDir: 'dist',
     assetsDir: 'assets',
     sourcemap: false,
     minify: 'esbuild',
+    target: ['es2017', 'chrome98'],
     rollupOptions: {
       output: {
         manualChunks: {

@@ -71,6 +71,7 @@
     "productName": "Antibiogram Analytics",
     "copyright": "Copyright © 2026 Abdallahjawadk. All Rights Reserved.",
     "asar": true,
+    "asarUnpack": [],
     "electronFuses": {
       "runAsNode": false,
       "enableCookieEncryption": true,
@@ -96,45 +97,43 @@
       "target": [
         {
           "target": "nsis",
-          "arch": [
-            "x64",
-            "ia32"
-          ]
+          "arch": ["x64", "ia32"]
         },
         {
           "target": "portable",
-          "arch": [
-            "x64",
-            "ia32"
-          ]
+          "arch": ["x64", "ia32"]
         }
       ],
       "icon": "build/icon.ico",
       "artifactName": "${productName}-${version}-${arch}-setup.${ext}",
-      "requestedExecutionLevel": "asInvoker"
+      "requestedExecutionLevel": "asInvoker",
+      "signAndEditExecutable": false,
+      "verifyUpdateCodeSignature": false
     },
     "nsis": {
       "oneClick": false,
       "allowToChangeInstallationDirectory": true,
+      "allowElevation": true,
       "perMachine": false,
       "installerIcon": "build/icon.ico",
       "uninstallerIcon": "build/uninstall.ico",
       "installerHeaderIcon": "build/icon.ico",
       "installerSidebar": "build/installer-sidebar.bmp",
+      "uninstallerSidebar": "build/installer-sidebar.bmp",
       "license": "LICENSE",
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
+      "menuCategory": "Medical Software",
       "shortcutName": "Antibiogram Analytics",
       "include": "build/installer.nsh",
       "artifactName": "${productName}-${version}-${arch}-setup.${ext}",
       "deleteAppDataOnUninstall": false,
       "displayLanguageSelector": true,
-      "installerLanguages": [
-        "en_US",
-        "ar_SA"
-      ],
+      "installerLanguages": ["en_US"],
       "language": "1033",
-      "multiLanguageInstaller": true
+      "multiLanguageInstaller": false,
+      "runAfterFinish": true,
+      "differentialPackage": false
     },
     "portable": {
       "artifactName": "${productName}-${version}-${arch}-portable.${ext}"
@@ -143,14 +142,10 @@
       "target": "dmg",
       "icon": "build/icon.icns",
       "artifactName": "${productName}-${version}-${arch}.${ext}",
-      "category": "public.app-category.medical",
-      "identity": "Abdallahjawadk"
+      "category": "public.app-category.medical"
     },
     "linux": {
-      "target": [
-        "AppImage",
-        "deb"
-      ],
+      "target": ["AppImage", "deb"],
       "icon": "build/icons",
       "artifactName": "${productName}-${version}-${arch}.${ext}",
       "category": "MedicalSoftware",

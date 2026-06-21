@@ -809,11 +809,11 @@ export function UploadModal({ hospital, onClose, onSuccess, onHospitalsCreated }
               const antibioticLower = antibioticRaw.toLowerCase();
               const antibiotic = fuzzyMatchAntibiotic(antibioticLower);
 
-              const s = sCol >= 0 ? parseInt(row[sCol]) || 0 : 0;
-              const inter = iCol >= 0 ? parseInt(row[iCol]) || 0 : 0;
-              const r = rCol >= 0 ? parseInt(row[rCol]) || 0 : 0;
-              const total = totalCol >= 0 ? parseInt(row[totalCol]) || 0 : s + inter + r;
-              const percent = percentCol >= 0 ? parseFloat(row[percentCol]) || 0 : (total > 0 ? (s / total) * 100 : 0);
+              const s = sCol >= 0 ? parseInt(String(row[sCol] ?? '')) || 0 : 0;
+              const inter = iCol >= 0 ? parseInt(String(row[iCol] ?? '')) || 0 : 0;
+              const r = rCol >= 0 ? parseInt(String(row[rCol] ?? '')) || 0 : 0;
+              const total = totalCol >= 0 ? parseInt(String(row[totalCol] ?? '')) || 0 : s + inter + r;
+              const percent = percentCol >= 0 ? parseFloat(String(row[percentCol] ?? '')) || 0 : (total > 0 ? (s / total) * 100 : 0);
               const specimenRaw = specimenCol >= 0 ? String(row[specimenCol] || '').trim() : '';
               const patientRaw = patientCol >= 0 ? String(row[patientCol] || '').trim() : '';
 
@@ -865,7 +865,6 @@ export function UploadModal({ hospital, onClose, onSuccess, onHospitalsCreated }
               setDedupCount(0);
               resolve(result);
             }
-          }
           }
         } catch (err) {
           reject(err instanceof Error ? err : new Error(t.upload.error));
