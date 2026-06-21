@@ -1,0 +1,190 @@
+{
+  "name": "antibiogram-analytics",
+  "version": "1.0.0",
+  "description": "A comprehensive antimicrobial susceptibility analysis system for generating professional antibiogram charts.",
+  "author": {
+    "name": "Abdallahjawadk",
+    "email": "contact@abdallahjawadk.com"
+  },
+  "homepage": "https://github.com/abdallahjawadk/antibiogram-analytics",
+  "license": "MIT",
+  "copyright": "Copyright © 2026 Abdallahjawadk. All Rights Reserved.",
+  "private": false,
+  "type": "module",
+  "main": "electron/main.cjs",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "generate:icons": "node scripts/generate-icons.mjs",
+    "obfuscate": "node scripts/obfuscate.mjs",
+    "build:win": "npm run generate:icons && vite build && npm run obfuscate && npm run package:win",
+    "build:mac": "npm run generate:icons && vite build && npm run obfuscate && npm run package:mac",
+    "build:linux": "npm run generate:icons && vite build && npm run obfuscate && npm run package:linux",
+    "package:win": "electron-builder --win --x64 --ia32",
+    "package:mac": "electron-builder --mac",
+    "package:linux": "electron-builder --linux",
+    "dist": "npm run generate:icons && npm run build && electron-builder",
+    "dist:win": "npm run generate:icons && npm run build && electron-builder --win",
+    "dist:all": "npm run generate:icons && npm run build && electron-builder -mwl",
+    "electron": "electron .",
+    "electron:dev": "concurrently \"npm run dev\" \"wait-on http://localhost:5173 && electron .\"",
+    "lint": "eslint .",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit -p tsconfig.app.json"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.71.2",
+    "@supabase/supabase-js": "^2.57.4",
+    "lucide-react": "^0.344.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-router-dom": "^7.18.0",
+    "recharts": "^3.8.1",
+    "xlsx": "^0.18.5"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.9.1",
+    "@types/react": "^18.3.5",
+    "@types/react-dom": "^18.3.0",
+    "@vitejs/plugin-react": "^4.3.1",
+    "autoprefixer": "^10.4.18",
+    "concurrently": "^9.2.0",
+    "electron": "22.3.27",
+    "electron-builder": "^26.15.3",
+    "eslint": "^9.9.1",
+    "eslint-plugin-react-hooks": "^5.1.0-rc.0",
+    "eslint-plugin-react-refresh": "^0.4.11",
+    "globals": "^15.9.0",
+    "javascript-obfuscator": "^5.4.3",
+    "postcss": "^8.4.35",
+    "tailwindcss": "^3.4.1",
+    "typescript": "^5.5.3",
+    "typescript-eslint": "^8.3.0",
+    "vite": "^5.4.2",
+    "vitest": "^2.1.9",
+    "wait-on": "^8.0.3"
+  },
+  "build": {
+    "appId": "com.abdallahjawadk.antibiogram-analytics",
+    "productName": "Antibiogram Analytics",
+    "copyright": "Copyright © 2026 Abdallahjawadk. All Rights Reserved.",
+    "asar": true,
+    "electronFuses": {
+      "runAsNode": false,
+      "enableCookieEncryption": true,
+      "enableNodeOptionsEnvironmentVariable": false,
+      "enableNodeCliInspectArguments": false,
+      "onlyLoadAppFromAsar": true
+    },
+    "directories": {
+      "output": "C:\\AntibiogramBuild\\release",
+      "buildResources": "build"
+    },
+    "files": [
+      "dist/**/*",
+      "electron/**/*",
+      "!electron/main.cjs",
+      "build/**/*",
+      "!node_modules"
+    ],
+    "extraMetadata": {
+      "main": "electron/main.obf.cjs"
+    },
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64",
+            "ia32"
+          ]
+        },
+        {
+          "target": "portable",
+          "arch": [
+            "x64",
+            "ia32"
+          ]
+        }
+      ],
+      "icon": "build/icon.ico",
+      "artifactName": "${productName}-${version}-${arch}-setup.${ext}",
+      "requestedExecutionLevel": "asInvoker"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "perMachine": false,
+      "installerIcon": "build/icon.ico",
+      "uninstallerIcon": "build/uninstall.ico",
+      "installerHeaderIcon": "build/icon.ico",
+      "installerSidebar": "build/installer-sidebar.bmp",
+      "license": "LICENSE",
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Antibiogram Analytics",
+      "include": "build/installer.nsh",
+      "artifactName": "${productName}-${version}-${arch}-setup.${ext}",
+      "deleteAppDataOnUninstall": false,
+      "displayLanguageSelector": true,
+      "installerLanguages": [
+        "en_US",
+        "ar_SA"
+      ],
+      "language": "1033",
+      "multiLanguageInstaller": true
+    },
+    "portable": {
+      "artifactName": "${productName}-${version}-${arch}-portable.${ext}"
+    },
+    "mac": {
+      "target": "dmg",
+      "icon": "build/icon.icns",
+      "artifactName": "${productName}-${version}-${arch}.${ext}",
+      "category": "public.app-category.medical",
+      "identity": "Abdallahjawadk"
+    },
+    "linux": {
+      "target": [
+        "AppImage",
+        "deb"
+      ],
+      "icon": "build/icons",
+      "artifactName": "${productName}-${version}-${arch}.${ext}",
+      "category": "MedicalSoftware",
+      "maintainer": "Abdallahjawadk <contact@abdallahjawadk.com>"
+    }
+  },
+  "keywords": [
+    "antibiogram",
+    "antimicrobial",
+    "susceptibility",
+    "bacteria",
+    "antibiotics",
+    "resistance",
+    "hospital",
+    "medical",
+    "microbiology",
+    "CLSI",
+    "EUCAST"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/abdallahjawadk/antibiogram-analytics.git"
+  },
+  "bugs": {
+    "url": "https://github.com/abdallahjawadk/antibiogram-analytics/issues"
+  },
+  "engines": {
+    "node": ">=16.0.0",
+    "npm": ">=8.0.0"
+  },
+  "os": [
+    "win32",
+    "win64",
+    "darwin",
+    "linux"
+  ]
+}

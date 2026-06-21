@@ -5,6 +5,7 @@ import { insertAntibiogramData, createUploadRecord, updateUploadRecord, ensureOr
 import { X, Upload, Check, AlertCircle, Download, Loader2, Calendar, Layers } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { interpret } from '../lib/clinical';
+import { parseExcelOffThread } from '../lib/excelWorker';
 
 // Parsing workbooks happens in the renderer process. Keep the maximum small
 // enough to avoid an accidental or hostile spreadsheet exhausting memory.
@@ -548,15 +549,30 @@ export function UploadModal({ hospital, onClose, onSuccess, onHospitalsCreated }
   });
 
   const parseExcelFile = useCallback(async (file: File): Promise<ParsedData[]> => {
+    // Get raw sheet JSON — use off-thread worker for files >250 KB
+    const jsonData: (string | number | null)[][] = await (async () => {
+      if (file.size > 250_000) {
+        const wd = await parseExcelOffThread(file, true).catch(() => null);
+        if (wd) return (wd.sheets[wd.sheetNames[0]] ?? []) as (string | number | null)[][];
+      }
+      return new Promise<(string | number | null)[][]>((res, rej) => {
+        const reader2 = new FileReader();
+        reader2.onload = (e) => {
+          try {
+            const wb = XLSX.read(e.target?.result, { type: 'array' });
+            const ws = wb.Sheets[wb.SheetNames[0]];
+            res(XLSX.utils.sheet_to_json(ws, { header: 1, defval: null }) as (string | number | null)[][]);
+          } catch { rej(new Error(t.upload.error)); }
+        };
+        reader2.onerror = () => rej(new Error(t.upload.error));
+        reader2.readAsArrayBuffer(file);
+      });
+    })();
+
     return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = (e) => {
+      const _reader = null as unknown as FileReader; void _reader; // keep closure shape
+      const runSync = () => {
         try {
-          const data = e.target?.result;
-          const workbook = XLSX.read(data, { type: 'array' });
-          const sheetName = workbook.SheetNames[0];
-          const worksheet = workbook.Sheets[sheetName];
-          const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 }) as string[][];
 
           // Smart header row detection: scan first 15 rows for the best candidate
           const rawRows = jsonData as (string | number | null)[][];
@@ -850,12 +866,12 @@ export function UploadModal({ hospital, onClose, onSuccess, onHospitalsCreated }
               resolve(result);
             }
           }
-        } catch {
-          reject(new Error(t.upload.error));
+          }
+        } catch (err) {
+          reject(err instanceof Error ? err : new Error(t.upload.error));
         }
       };
-      reader.onerror = () => reject(new Error(t.upload.error));
-      reader.readAsArrayBuffer(file);
+      runSync();
     });
   }, [t.upload.error, importType, standard]);
 

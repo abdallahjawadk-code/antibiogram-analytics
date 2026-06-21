@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="ar">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/icon.svg" />
+    <link rel="icon" type="image/x-icon" href="/favicon.ico" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#14b8a6" />
+    <meta name="author" content="Abdallahjawadk" />
+    <meta name="copyright" content="Copyright © 2026 Abdallahjawadk" />
+
+    <!-- App Title -->
+    <title>Antibiogram Analytics | نظام تحليل خريطة الحساسية</title>
+
+    <!-- Meta Tags -->
+    <meta name="description" content="Professional Antimicrobial Susceptibility Analysis System - نظام متخصص لتحليل الحساسية المضادة للميكروبات" />
+    <meta name="keywords" content="antibiogram, antimicrobial, antibiotics, resistance, susceptibility, CLSI, EUCAST, microbiology" />
+
+    <!-- Open Graph -->
+    <meta property="og:title" content="Antibiogram Analytics System" />
+    <meta property="og:description" content="Professional Antimicrobial Susceptibility Analysis System developed by Abdallahjawadk" />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Antibiogram Analytics" />
+
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+Arabic:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+    <!-- Desktop App Meta -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="Antibiogram">
+    <meta name="application-name" content="Antibiogram Analytics">
+    <meta name="msapplication-TileColor" content="#14b8a6">
+    <meta name="msapplication-config" content="/browserconfig.xml">
+  </head>
+  <body class="antialiased bg-slate-50">
+    <!-- Loading Screen -->
+    <div id="loading-screen" class="fixed inset-0 bg-gradient-to-br from-teal-500 to-cyan-600 flex items-center justify-center z-50">
+      <div class="text-center text-white">
+        <div class="w-20 h-20 mx-auto mb-6 rounded-3xl bg-white/20 backdrop-blur-xl flex items-center justify-center animate-pulse">
+          <svg class="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+          </svg>
+        </div>
+        <h1 class="text-2xl font-bold mb-2">Antibiogram Analytics</h1>
+        <p class="text-teal-100 opacity-80">Loading...</p>
+        <div class="mt-6 flex justify-center gap-1">
+          <div class="w-2 h-2 rounded-full bg-white animate-bounce"></div>
+          <div class="w-2 h-2 rounded-full bg-white animate-bounce" style="animation-delay: 0.1s;"></div>
+          <div class="w-2 h-2 rounded-full bg-white animate-bounce" style="animation-delay: 0.2s;"></div>
+        </div>
+        <p class="mt-8 text-xs opacity-60">© 2026 Abdallahjawadk</p>
+      </div>
+    </div>
+
+    <!-- App Root -->
+    <div id="root"></div>
+
+    <!-- Entry Point -->
+    <script type="module" src="/src/main.tsx"></script>
+
+    <!-- Hide loading screen when app loads -->
+    <script>
+      window.addEventListener('load', function() {
+        setTimeout(function() {
+          var loadingScreen = document.getElementById('loading-screen');
+          if (loadingScreen) {
+            loadingScreen.style.opacity = '0';
+            loadingScreen.style.transition = 'opacity 0.5s ease';
+            setTimeout(function() {
+              loadingScreen.style.display = 'none';
+            }, 500);
+          }
+        }, 1000);
+      });
+    </script>
+
+    <!-- Noscript fallback -->
+    <noscript>
+      <div class="fixed inset-0 bg-slate-100 flex items-center justify-center">
+        <div class="text-center p-8">
+          <h1 class="text-2xl font-bold text-slate-800 mb-4">JavaScript Required</h1>
+          <p class="text-slate-600">Please enable JavaScript to run this application.</p>
+        </div>
+      </div>
+    </noscript>
+  </body>
+</html>
